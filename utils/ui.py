@@ -2,16 +2,44 @@
 import discord
 import re
 
+# --- CONFIGURATION ---
+GENRE_EMOJIS = {
+    "Action": "💥",
+    "Adventure": "🧭",
+    "Comedy": "🤡",
+    "Drama": "🎭",
+    "Ecchi": "🍑",
+    "Fantasy": "🏰",
+    "Horror": "👻",
+    "Mahou Shoujo": "💫",
+    "Mecha": "🤖",
+    "Music": "🎵",
+    "Mystery": "🔎",
+    "Psychological": "🧠",
+    "Romance": "💖",
+    "Sci-Fi": "🛸",
+    "Slice of Life": "🍰",
+    "Sports": "⚽",
+    "Supernatural": "🔮",
+    "Thriller": "🚨"
+    # Fallback for others will be a standard white square ⬜
+}
 
 # --- HELPER ---
-def clean_and_truncate(text, url, limit=1000):
-    if not text: return "No description available."
-    clean = re.compile('<.*?>')
-    text = re.sub(clean, '', text).replace("  ", " ").strip()
-    if len(text) > limit:
-        return f"{text[:limit]}... [(Read More on Website)]({url})"
-    return text
+def clean_and_truncate(text, url=None, limit=1000):
+    if not text:
+        return "No description available."
 
+    clean = re.compile('<.*?>|__|~{2,}|\*\*|\[|\]|\(.*?\)')
+    text = re.sub(clean, '', text)
+    text = text.replace("  ", " ").strip()
+
+    if len(text) > limit:
+        if url:
+            return f"{text[:limit]}... [(Read More)]({url})"
+        else:
+            return f"{text[:limit]}..."
+    return text
 
 # --- EMBED BUILDERS ---
 def build_media_embed(media):
@@ -28,14 +56,12 @@ def build_media_embed(media):
         color=embed_color
     )
 
-    # Image Layout: Poster is Big (Bottom), Banner is Thumbnail (Top Right)
     if media['bannerImage']:
         embed.set_image(url=media['bannerImage'])
         embed.set_thumbnail(url=media['coverImage']['extraLarge'])
     else:
         embed.set_image(url=media['coverImage']['extraLarge'])
 
-    # Fields
     score = f"{media['averageScore']}%" if media['averageScore'] else "N/A"
     status = media['status'].title().replace("_", " ") if media['status'] else "Unknown"
 
@@ -57,7 +83,6 @@ def build_media_embed(media):
     if media['genres']:
         embed.add_field(name="🎭 Genres", value=", ".join(media['genres'][:3]), inline=True)
 
-    # Related
     relations = media.get('relations', {}).get('edges', [])
     related_lines = []
     for edge in relations:
@@ -70,7 +95,6 @@ def build_media_embed(media):
     if related_lines:
         embed.add_field(name="🎬 Related Media", value="\n".join(related_lines[:5]), inline=False)
 
-    # Links
     links = media.get('externalLinks', [])
     if links:
         formatted = [f"[{l['site']}]({l['url']})" for l in links[:6]]
@@ -100,6 +124,46 @@ def build_character_embed(char):
 
     return embed
 
+
+def build_user_embed(user):
+    name = user['name']
+    bio = clean_and_truncate(user['about'], limit=300)
+
+    embed = discord.Embed(title=name, url=user['siteUrl'], description=bio, color=0x3DB4F2)
+
+    if user['avatar']['large']:
+        embed.set_thumbnail(url=user['avatar']['large'])
+
+    if user['bannerImage']:
+        embed.set_image(url=user['bannerImage'])
+
+    asts = user['statistics']['anime']
+    days_watched = f"{asts['minutesWatched'] / 60 / 24:.1f}" if asts['minutesWatched'] else "0"
+
+    msts = user['statistics']['manga']
+
+    embed.add_field(name="📺 Anime Stats",
+                    value=f"**Count:** {asts['count']}\n**Episodes:** {asts['episodesWatched']}\n**Days:** {days_watched}",
+                    inline=True)
+
+    embed.add_field(name="📚 Manga Stats",
+                    value=f"**Count:** {msts['count']}\n**Chapters:** {msts['chaptersRead']}\n**Volumes:** {msts['volumesRead']}",
+                    inline=True)
+
+    # --- GENRE OVERVIEW ---
+    genres = asts.get('genres', [])
+    if genres:
+        genre_lines = []
+        # Enforce max 4 genres, even if the query returns more
+        for g in genres[:4]:
+            g_name = g['genre']
+            count = g['count']
+            emoji = GENRE_EMOJIS.get(g_name, "⬜")
+            genre_lines.append(f"{emoji} **{g_name}** - {count} Entries")
+
+        embed.add_field(name="🎬 Favorite Genres", value="\n".join(genre_lines), inline=False)
+
+    return embed
 
 # --- PAGINATION ---
 class PaginationView(discord.ui.View):

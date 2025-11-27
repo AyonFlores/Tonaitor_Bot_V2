@@ -5,9 +5,9 @@
 __pycache__/
 *.py[cod]
 
-# PyCharm settings (User specific)
+# PyCharm settings
 .idea/
 
-# Virtual Environment (Too big, not needed)
+# Virtual Environment
 .venv/
 venv/

@@ -49,3 +49,35 @@ query ($search: String) {
   }
 }
 '''
+
+# --- NEW: USER QUERY ---
+USER_QUERY = '''
+query ($name: String) {
+  User (name: $name) {
+    name
+    siteUrl
+    avatar {
+      large
+    }
+    bannerImage
+    about(asHtml: false)
+    statistics {
+      anime {
+        count
+        episodesWatched
+        minutesWatched
+        # CHANGED: limit: 4
+        genres(limit: 4, sort: COUNT_DESC) {
+          genre
+          count
+        }
+      }
+      manga {
+        count
+        chaptersRead
+        volumesRead
+      }
+    }
+  }
+}
+'''
