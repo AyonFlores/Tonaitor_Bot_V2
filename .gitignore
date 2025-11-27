@@ -1,0 +1,13 @@
+# Security (NEVER UPLOAD THESE)
+.env
+
+# Python junk
+__pycache__/
+*.py[cod]
+
+# PyCharm settings (User specific)
+.idea/
+
+# Virtual Environment (Too big, not needed)
+.venv/
+venv/
